@@ -1,92 +1,86 @@
 from django.shortcuts import render
 import requests
 from django.conf import settings
-# Create your views here.
+
 
 def index(request):
-    city_weather={}
-    error=None
-    
+    city_weather = {}
+    error = None
 
-    if request.method=='POST':
-        city_name=request.POST.get('city')
-        api_url=f'https://api.weatherapi.com/v1/current.json?&q={city_name}&'
-        url=api_url+city_name
-        
-        params = {"aqi": "yes","lang": "ar","key": settings.WEATHER_API_KEY,}
-    
-    
-       # 👈 يخلي الوصف بالعربي
+    if request.method == 'POST':
+        city_name = request.POST.get('city')
 
+        api_url = 'https://api.weatherapi.com/v1/current.json'
+        params = {
+            "q": city_name,
+            "key": settings.WEATHER_API_KEY,
+            "aqi": "yes",
+            "lang": "ar"
+        }
 
-        respons=requests.get(url,params=params)
-        data=respons.json()
-        if respons.status_code==200:
-            city_weather={
-             #بيانات الموقع   
-                'city':city_name,
-                'region':data["location"]["region"],
-                'country':data["location"]["country"],
-                'lat':data["location"]["lat"],
-                'lon':data["location"]["lon"],
-                'tz_id':data["location"]["tz_id"],
-                'localtime':data["location"]["localtime"],
+        response = requests.get(api_url, params=params)
+        data = response.json()
 
-                #بيانات الطقس
-                'temp_c':data["current"]["temp_c"], #الحرارة بالسلسيوس
-                'temp_f':data["current"]["temp_f"],         # الحرارة بالفهرنهايت
-                'feelslike_c':data["current"]["feelslike_c"],    # الحرارة المحسوسة C
-                'feelslike_f':data["current"]["feelslike_f"],    # الحرارة المحسوسة F
-                
-                #وصف حالة الطقس
+        # ✅ لو في خطأ من الـ API (مدينة مش موجودة)
+        if "error" in data:
+            error = "❌ المدينة غير موجودة، تأكد من الكتابة بشكل صحيح"
+        else:
+            city_weather = {
+                # 📍 بيانات الموقع
+                'city': data["location"]["name"],
+                'region': data["location"]["region"],
+                'country': data["location"]["country"],
+                'lat': data["location"]["lat"],
+                'lon': data["location"]["lon"],
+                'tz_id': data["location"]["tz_id"],
+                'localtime': data["location"]["localtime"],
 
-                'text':data["current"]["condition"]["text"],   # وصف الحالة 
-                'icon':data["current"]["condition"]["icon"],   # أيقونة الطقس
-                'code':data["current"]["condition"]["code"],   # كود الحالة
-                
-                #الرطوبة و السحب
+                # 🌡️ بيانات الطقس
+                'temp_c': data["current"]["temp_c"],
+                'temp_f': data["current"]["temp_f"],
+                'feelslike_c': data["current"]["feelslike_c"],
+                'feelslike_f': data["current"]["feelslike_f"],
 
-                'humidity':data["current"]["humidity"],       # نسبة الرطوبة %
-                'cloud':data["current"]["cloud"],          # نسبة السحب %
+                # 🌥️ حالة الطقس
+                'text': data["current"]["condition"]["text"],
+                'icon': data["current"]["condition"]["icon"],
+                'code': data["current"]["condition"]["code"],
 
-                # الامطار و الضغط
+                # 💧 الرطوبة والسحب
+                'humidity': data["current"]["humidity"],
+                'cloud': data["current"]["cloud"],
 
-                'precip_mm':data["current"]["precip_mm"],      # كمية الأمطار مم
-                'pressure_mb':data["current"]["pressure_mb"],    # الضغط الجوي
+                # 🌧️ الأمطار والضغط
+                'precip_mm': data["current"]["precip_mm"],
+                'pressure_mb': data["current"]["pressure_mb"],
 
-                #الرئية و الاشعة البنفسجية
-                'vis_km':data["current"]["vis_km"],         # مدى الرؤية كم
-                'uv':data["current"]["uv"],             # مؤشر الأشعة فوق البنفسجية
+                # 👁️ الرؤية و UV
+                'vis_km': data["current"]["vis_km"],
+                'uv': data["current"]["uv"],
 
-                #وقت التحديث
-                'last_updated':data["current"]["last_updated"],   # آخر تحديث للبيانات
+                # 🕒 آخر تحديث
+                'last_updated': data["current"]["last_updated"],
 
-                #جودة الهواء
-
-                'co':data["current"]["air_quality"]["co"],# أول أكسيد الكربون
-                'no2':data["current"]["air_quality"]["no2"],# ثاني أكسيد النيتروجين
-                'o3':data["current"]["air_quality"]["o3"],# الأوزون
-                'pm2_5':data["current"]["air_quality"]["pm2_5"], # جسيمات دقيقة خطيرة
-                'pm10':data["current"]["air_quality"]["pm10"],# جسيمات غبار
-                'us-epa-index':data["current"]["air_quality"]["us-epa-index"],# مؤشر جودة الهواء الأمريكي (الأهم)
-
-                
-
-
-            
+                # 🌫️ جودة الهواء
+                'co': data["current"]["air_quality"]["co"],
+                'no2': data["current"]["air_quality"]["no2"],
+                'o3': data["current"]["air_quality"]["o3"],
+                'pm2_5': data["current"]["air_quality"]["pm2_5"],
+                'pm10': data["current"]["air_quality"]["pm10"],
             }
-        aqi = data["current"]["air_quality"]
-        index = aqi["us-epa-index"]
-        city_weather["aqi_description"] = get_aqi_description(index)
-    
-        error='هذه المدينة غير موجودة'
-    return render(request,'weatherapi.html',{'city_weather':city_weather,'error':error})        
 
+            # مؤشر جودة الهواء
+            aqi = data["current"]["air_quality"]
+            index = aqi["us-epa-index"]
+            city_weather["aqi_description"] = get_aqi_description(index)
+
+    return render(request, 'weatherapi.html', {
+        'city_weather': city_weather,
+        'error': error
+    })
 
 
 def get_aqi_description(i):
-        
-
     descriptions = {
         1: "الهواء نقي تمامًا ومناسب لكل الناس بدون أي مخاطر 🌿",
         2: "جودة الهواء جيدة ولا توجد مخاطر تُذكر على الصحة 👍",
@@ -96,5 +90,3 @@ def get_aqi_description(i):
         6: "الهواء خطير جدًا على الصحة، تجنب الخروج تمامًا 🚫"
     }
     return descriptions.get(i, "لا توجد بيانات متاحة")
-
-

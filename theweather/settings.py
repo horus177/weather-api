@@ -24,9 +24,9 @@ load_dotenv(os.path.join(BASE_DIR,'.env'))
 SECRET_KEY = 'django-insecure-ov&xa^7#dus3m-=w%w%gj6qn6(j6t-@bx^(ytqv(7$0nildr48'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['hours.pythonanywhere.com']
 
 
 # Application definition
@@ -38,7 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'weather_api',
+
     'weatherapi',
 ]
 
