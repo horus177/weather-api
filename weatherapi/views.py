@@ -1,21 +1,24 @@
 from django.shortcuts import render
 import requests
 from django.conf import settings
-
+import datetime
 
 def index(request):
     city_weather = {}
+    forecast_days = []
     error = None
 
     if request.method == 'POST':
         city_name = request.POST.get('city')
 
-        api_url = 'https://api.weatherapi.com/v1/current.json'
+        api_url = 'https://api.weatherapi.com/v1/forecast.json'
         params = {
             "q": city_name,
             "key": settings.WEATHER_API_KEY,
             "aqi": "yes",
-            "lang": "ar"
+            "lang": "ar",
+            "days": 3,
+
         }
 
         response = requests.get(api_url, params=params)
@@ -73,9 +76,28 @@ def index(request):
             aqi = data["current"]["air_quality"]
             index = aqi["us-epa-index"]
             city_weather["aqi_description"] = get_aqi_description(index)
+            forecast_days = data["forecast"]["forecastday"]
+            
+            arabic_days = {
+                "Monday": "الاثنين",
+                "Tuesday": "الثلاثاء",
+                "Wednesday": "الأربعاء",
+                "Thursday": "الخميس",
+                "Friday": "الجمعة",
+                "Saturday": "السبت",
+                "Sunday": "الأحد",
+            }
+
+            for day in forecast_days:
+                date_obj = datetime.datetime.strptime(day["date"], "%Y-%m-%d")
+                english_day = date_obj.strftime("%A")
+                day["day_name"] = arabic_days.get(english_day, english_day)
+
+
 
     return render(request, 'weatherapi.html', {
         'city_weather': city_weather,
+        'forecast_days':forecast_days,
         'error': error
     })
 
