@@ -68,12 +68,14 @@ def index(request):
             "pressure_mb": current.get("pressure_mb"),
             "uv": current.get("uv"),
             "last_updated": current.get("last_updated"),
+            "cloud": current.get("cloud"),
         }
 
         # -------------------
         # جودة الهواء
         # -------------------
         air_quality = current.get("air_quality")
+        
 
         if air_quality:
             index = air_quality.get("us-epa-index")
