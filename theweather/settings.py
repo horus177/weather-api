@@ -24,9 +24,9 @@ load_dotenv(os.path.join(BASE_DIR,'.env'))
 SECRET_KEY = 'django-insecure-ov&xa^7#dus3m-=w%w%gj6qn6(j6t-@bx^(ytqv(7$0nildr48'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
-ALLOWED_HOSTS = ['hours.pythonanywhere.com']
+ALLOWED_HOSTS = []
 
 
 # Application definition
@@ -122,3 +122,10 @@ WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
+
+STATIC_ROOT = BASE_DIR / "staticfiles"
+

@@ -4,6 +4,9 @@
 <head>
 <meta charset="UTF-8">
 <title>تطبيق الطقس المتقدم</title>
+<link rel="manifest" href="{% static 'manifest.json' %}">
+<link rel="icon" href="{% static 'icons/icon-192.png' %}">
+<meta name="theme-color" content="#00ffff">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -81,18 +84,18 @@ body.dark .quick-cities button:hover{
 body.dark .main-card{background:#222;}
 .main-card img{width:80px}
 
-/* العنوان بالعرض */
 /* العنوان بالعرض للكارت الرئيسي */
 .main-card .title-box{
     width:100%;
     background:#1a1a1a;
     color:cyan;
-    padding:4px 8px;              /* أنحف */
+    padding:4px 8px;
     border-radius:12px 12px 0 0;
     margin:-20px -20px 12px -20px;
-    font-size:16px;               /* أصغر */
-    font-weight:500;              /* أرفع */
+    font-size:16px;
+    font-weight:500;
 }
+
 /* Grid */
 .grid{
     display:grid;
@@ -102,11 +105,22 @@ body.dark .main-card{background:#222;}
 
 .box{
     background:rgba(255,255,255,0.95);
-    padding:15px;
-    border-radius:12px;
+    padding:18px;
+    border-radius:18px;
     transition:0.3s;
+    box-shadow:0 8px 20px rgba(0,0,0,0.1);
 }
-body.dark .box{background:#222}
+
+body.dark .box{
+    background:#222;
+    box-shadow:0 8px 20px rgba(0,0,0,0.5);
+}
+
+.wind-arrow{
+    display:inline-block;
+    font-size:22px;
+    transition: transform 0.4s ease;
+}
 
 /* العنوان بالعرض للكروت */
 .box .title-box{
@@ -214,12 +228,12 @@ body.dark .forecast-day{background:#222}
 
 /* ناف بار سفلي */
 .bottom-nav{
-    position: fixed;      /* ثابت في أسفل الصفحة */
+    position: fixed;
     bottom: 0;
     width: 100%;
-    background: #222;     /* خلفية داكنة */
-    color: white;         /* لون النص */
-    display: flex;        /* ترتيب العناصر بشكل أفقي */
+    background: #222;
+    color: white;
+    display: flex;
     justify-content: space-around;
     align-items: center;
     height: 60px;
@@ -227,14 +241,22 @@ body.dark .forecast-day{background:#222}
 }
 .bottom-nav div{
     display: flex;
-    flex-direction: column; /* أيقونة + النص تحتها */
+    flex-direction: column;
     align-items: center;
 }
 .bottom-nav span{
-    font-size: 14px;       /* نص تحت الأيقونة */
+    font-size: 14px;
 }
-
 </style>
+
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register("{% static 'sw.js' %}")
+    .then(function() {
+      console.log("Service Worker Registered");
+    });
+}
+</script>
 </head>
 
 <body>
@@ -246,8 +268,7 @@ body.dark .forecast-day{background:#222}
 <!-- البحث -->
 <form method="POST" class="search-box">
     {% csrf_token %}
-    <input type="text" name="city" id="cityInput"
-           placeholder="اكتب اسم المدينة..." required autofocus>
+    <input type="text" name="city" id="cityInput" placeholder="اكتب اسم المدينة..." required autofocus>
     <button type="submit">بحث</button>
     <button type="button" onclick="getLocation()">📍 موقعي</button>
 </form>
@@ -274,7 +295,6 @@ body.dark .forecast-day{background:#222}
 </div>
 {% endif %}
 
-
 <!-- الكارت الرئيسي -->
 <div class="main-card">
 <div class="title-box">
@@ -292,24 +312,61 @@ body.dark .forecast-day{background:#222}
 </div>
 
 <div class="grid">
-<div class="box">
-<div class="title-box"><h3>🌡 الحرارة</h3></div>
-<p>المحسوسة: {{city_weather.feelslike_c}}°C</p>
-<p>الرطوبة: {{city_weather.humidity}}%</p>
-<p>السحب: {{city_weather.cloud}}%</p>
-</div>
 
-<div class="box">
-<div class="title-box"><h3>🌧 الضغط والرؤية</h3></div>
-<p>الضغط: {{city_weather.pressure_mb}} mb</p>
-<p>الرؤية: {{city_weather.vis_km}} كم</p>
-<p>UV: {{city_weather.uv}}</p>
-</div>
-</div>
+  <!-- كارت الحرارة -->
+  <div class="box">
+    <div class="title-box"><h3>🌡 الحرارة</h3></div>
+    <p>المحسوسة: {{city_weather.feelslike_c}}°C</p>
+    <p>الرطوبة: {{city_weather.humidity}}%</p>
+    <p>السحب: {{city_weather.cloud}}%</p>
+  </div>
+
+  <!-- كارت الضغط والرؤية -->
+  <div class="box">
+    <div class="title-box"><h3>🌧 الضغط والرؤية</h3></div>
+    <p>الضغط: {{city_weather.pressure_mb}} mb</p>
+    <p>الرؤية: {{city_weather.vis_km}} كم</p>
+    <p>UV: {{city_weather.uv}}</p>
+  </div>
+
+  <!-- كارت الرياح والأمطار -->
+  <div class="box">
+    <div class="title-box"><h3>🌬 الرياح والأمطار</h3></div>
+
+    <p>
+      سرعة الرياح:
+      <span style="
+        color:
+        {% if city_weather.wind_kph < 20 %}green
+        {% elif city_weather.wind_kph < 40 %}orange
+        {% else %}red
+        {% endif %};
+      ">
+        {{city_weather.wind_kph}} كم/س
+      </span>
+    </p>
+
+    <p>هبات الرياح: {{city_weather.gust_kph}} كم/س</p>
+
+    <p>
+      الاتجاه:
+      <span class="wind-arrow" style="transform: rotate({{city_weather.wind_degree}}deg);">
+        ⬆
+      </span>
+      {{city_weather.wind_dir}}
+    </p>
+
+    {% if city_weather.precip_mm > 0 %}
+    <hr>
+    <p>🌧 الأمطار: {{city_weather.precip_mm}} مم</p>
+    {% endif %}
+
+  </div>
+
+</div> <!-- نهاية الـ grid -->
 
 <!-- التوقعات لثلاث أيام قادمة -->
 {% if forecast_days %}
-
 <div class="forecast">
 {% for day in forecast_days %}
 <div class="forecast-day">
@@ -326,6 +383,7 @@ body.dark .forecast-day{background:#222}
 {% endif %}
 
 </div>
+
 <!-- فوتر الطقس -->
 <div class="bottom-nav">
     <div>☀️<span>مشمس</span></div>
@@ -349,15 +407,13 @@ icon.textContent=document.body.classList.contains('dark')?'☀️':'🌙';
 
 /* حفظ آخر مدينة */
 if(localStorage.getItem("lastCity")){
-document.getElementById("cityInput").value=
-localStorage.getItem("lastCity");
+document.getElementById("cityInput").value=localStorage.getItem("lastCity");
 }
 
 /* إظهار اللودنج */
 document.querySelector("form").addEventListener("submit",function(){
 document.getElementById("loadingSpinner").style.display="flex";
-localStorage.setItem("lastCity",
-document.getElementById("cityInput").value);
+localStorage.setItem("lastCity", document.getElementById("cityInput").value);
 });
 
 /* تحديد الموقع */
@@ -365,8 +421,7 @@ function getLocation(){
 if(navigator.geolocation){
 navigator.geolocation.getCurrentPosition(function(position){
 document.getElementById("cityInput").value=
-position.coords.latitude + "," +
-position.coords.longitude;
+position.coords.latitude + "," + position.coords.longitude;
 });
 }
 }

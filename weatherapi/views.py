@@ -12,70 +12,85 @@ def index(request):
     if request.method == "POST":
         city_name = request.POST.get("city")
 
+        if not city_name:
+            error = "من فضلك أدخل اسم المدينة"
+            return render(request, "weatherapi.html", {
+                "error": error
+            })
+
         api_url = "https://api.weatherapi.com/v1/forecast.json"
 
         params = {
             "key": settings.WEATHER_API_KEY,
             "q": city_name,
-            "days": 3,          # هنجيب 4 علشان نشيل اليوم الحالي
+            "days": 3,
             "aqi": "yes",
             "lang": "ar"
         }
 
-        response = requests.get(api_url, params=params)
-        data = response.json()
+        try:
+            response = requests.get(api_url, params=params, timeout=10)
+            data = response.json()
+        except requests.RequestException:
+            error = "حدث خطأ أثناء الاتصال بخدمة الطقس"
+            return render(request, "weatherapi.html", {"error": error})
 
-        # 🔴 لو فيه error من الـ API
+        # 🔴 لو فيه خطأ من الـ API
         if data.get("error"):
             error = data["error"]["message"]
             return render(request, "weatherapi.html", {
-                "error": error,
-                "city_weather": None,
-                "forecast_days": []
+                "error": error
             })
 
-        # 🟢 هنا متأكدين إن البيانات سليمة
         location = data.get("location", {})
         current = data.get("current", {})
         forecast = data.get("forecast", {}).get("forecastday", [])
 
         if not current:
             error = "لا توجد بيانات حالية لهذه المدينة"
-            return render(request, "weatherapi.html", {
-                "error": error,
-                "city_weather": None,
-                "forecast_days": []
-            })
+            return render(request, "weatherapi.html", {"error": error})
 
         # -------------------
         # بيانات الطقس الحالي
         # -------------------
         city_weather = {
+            # 📍 الموقع
             "city": location.get("name"),
             "region": location.get("region"),
             "country": location.get("country"),
-            "lat": location.get("lat"),
-            "lon": location.get("lon"),
-            "tz_id": location.get("tz_id"),
             "localtime": location.get("localtime"),
 
+            # 🌡️ الحرارة
             "temp_c": current.get("temp_c"),
             "feelslike_c": current.get("feelslike_c"),
             "text": current.get("condition", {}).get("text"),
             "icon": current.get("condition", {}).get("icon"),
+
+            # 🌬️ الرياح (أضفتهم لك هنا)
+            "wind_kph": current.get("wind_kph"),
+            "wind_mph": current.get("wind_mph"),
+            "wind_dir": current.get("wind_dir"),
+            "wind_degree": current.get("wind_degree"),
+            "gust_kph": current.get("gust_kph"),
+
+            # 💧 الرطوبة والسحب
             "humidity": current.get("humidity"),
-            "vis_km": current.get("vis_km"),
+            "cloud": current.get("cloud"),
+
+            # 🌧️ أمطار وضغط
+            "precip_mm": current.get("precip_mm"),
             "pressure_mb": current.get("pressure_mb"),
+
+            # 🔆 إضافي
+            "vis_km": current.get("vis_km"),
             "uv": current.get("uv"),
             "last_updated": current.get("last_updated"),
-            "cloud": current.get("cloud"),
         }
 
         # -------------------
         # جودة الهواء
         # -------------------
         air_quality = current.get("air_quality")
-        
 
         if air_quality:
             index = air_quality.get("us-epa-index")
@@ -89,7 +104,7 @@ def index(request):
             city_weather["aqi_description"] = "لا توجد بيانات جودة الهواء"
 
         # -------------------
-        # الثلاث أيام القادمة فقط (بدون اليوم الحالي)
+        # التوقعات القادمة
         # -------------------
         forecast_days = forecast
 
@@ -116,15 +131,15 @@ def index(request):
 
 
 # -------------------
-# دالة وصف جودة الهواء
+# وصف جودة الهواء
 # -------------------
 def get_aqi_description(i):
     descriptions = {
-         1: "الهواء نقي تمامًا ومناسب لكل الناس بدون أي مخاطر 🌿",
-        2: "جودة الهواء جيدة ولا توجد مخاطر تُذكر على الصحة 👍",
-        3: "جودة الهواء متوسطة، يُفضل تقليل المجهود الخارجي لمرضى الحساسية 😐",
-        4: "الهواء غير صحي للحساسين ومرضى الصدر، يُفضل تقليل الخروج ⚠️",
-        5: "الهواء غير صحي للجميع، يُنصح بالبقاء في أماكن مغلقة 😷",
-        6: "الهواء خطير جدًا على الصحة، تجنب الخروج تم"
-    }    
+        1: "الهواء نقي تمامًا 🌿",
+        2: "جودة الهواء جيدة 👍",
+        3: "جودة الهواء متوسطة 😐",
+        4: "غير صحي للحساسين ⚠️",
+        5: "غير صحي للجميع 😷",
+        6: "الهواء خطير جدًا 🚨"
+    }
     return descriptions.get(i, "لا توجد بيانات")
